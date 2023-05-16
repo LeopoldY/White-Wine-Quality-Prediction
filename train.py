@@ -1,0 +1,127 @@
+import os
+import argparse
+import math
+import pandas as pd
+import torch
+import torch.nn as nn
+
+from torch.utils.data import TensorDataset, DataLoader
+from torch.autograd import Variable 
+
+from sklearn.model_selection import train_test_split
+from sklearn.discriminant_analysis import StandardScaler
+
+# 运行参数
+parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
+parser.add_argument('--batch_size', type=int, default=64, help='training batch size') # batch size 一批处理的数据量
+parser.add_argument('--epochs', type=int, default=50, help='number of epochs to train') # 总的迭代次数
+parser.add_argument('--use_cuda', default=False, help='using CUDA for training') # 是否使用GPU训练 若使用GPU，请将False改为Ture
+
+args = parser.parse_args()
+args.cuda = args.use_cuda and torch.cuda.is_available()
+    
+data = pd.read_csv('winequality-white.csv', delimiter=';') # 载入数据集
+X = data.iloc[:, :-1].values # 分离出参数 X
+y = data.iloc[:, -1].values # 分离出标签 Y
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1) # 划分训练/测试数据
+
+# 标准化数据集：
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+
+# 将ndarray转化为tensor
+X_train_tensor = torch.from_numpy(X_train).float()
+y_train_tensor = torch.from_numpy(y_train).long()
+X_test_tensor = torch.from_numpy(X_test).float()
+y_test_tensor = torch.from_numpy(y_test).long()
+
+# 创建张量数据集 TensorDataset
+train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
+test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
+
+# 创建可供训练的数据 DataLoader
+train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
+
+# 自定义网络结构，包含三个全连接层和两个relu激活函数
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.fc1 = nn.Linear(11, 16)
+        self.fc2 = nn.Linear(16, 10)
+        # self.fc3 = nn.Linear(64, 10)
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+# 实例化网络
+net = Net()
+
+# 训练函数
+def train():
+    if args.cuda: # 使用GPU，将网络载入cuda
+        print(f'training on {torch.cuda.get_device_name(0)}')
+        net.cuda()
+    else: # 使用CPU
+        print('training with CPU')
+    
+    if not os.path.exists("./output"): # 创建输出文件夹
+        os.mkdir("./output")
+
+    loss_func = nn.CrossEntropyLoss() # 定义损失函数为交叉熵损失函数
+    optimizer = torch.optim.SGD(net.parameters(), lr=1) # 定义优化器
+    CosineLR = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=150, eta_min=0) # 余弦退火学习率衰减
+
+    # --------------------------开始训练------------------------
+    for epoch in range(args.epochs): 
+        net.train() # 将网络设置为训练模式
+        train_loss = 0 # 当前迭代中训练损失，初始化为0
+        train_acc = 0 # 当前迭代中预测正确的数量
+        for batch, (batch_x, batch_y) in enumerate(train_loader): # 批处理
+            if args.cuda: # 使用GPU，将数据载入cuda
+                batch_x, batch_y = Variable(batch_x.cuda()), Variable(batch_y.cuda())
+            else: # 使用CPU
+                batch_x, batch_y = Variable(batch_x), Variable(batch_y)
+            out = net(batch_x) # 将一批数据导入网络，获得输出out，注意：这个不是预测值，而是输出的10个类别的概率分布
+            loss = loss_func(out, batch_y) # 计算一批数据的损失
+            train_loss += loss.item() # 将损失加到当前迭代的总损失中
+            pred = torch.max(out, 1)[1] # 获得预测值
+            train_correct = (pred == batch_y).sum() # 计算预测值中预测正确的数量
+            train_acc += train_correct.item() # 将正确值加到当前迭代的总正确值中
+            print('epoch: %2d/%d batch %3d/%d  Train Loss: %.3f, Acc: %.3f'
+                  % (epoch + 1, args.epochs, batch + 1, math.ceil(len(train_dataset) / args.batch_size),
+                     loss.item(), train_correct.item() / len(batch_x)))
+
+            optimizer.zero_grad() # 梯度清零
+            loss.backward() # 反向传播
+            optimizer.step() 
+        CosineLR.step() # 更新learning rate
+        print('Train Loss: %.6f, Acc: %.3f' % (train_loss / (math.ceil(len(train_dataset)/args.batch_size)),
+                                               train_acc / (len(train_dataset))))
+
+        # ------------------------验证------------------------
+        net.eval() # 将网络设置为验证模式
+        eval_loss = 0 # 当前验证中验证损失，初始化为0
+        eval_acc = 0 # 当前验证中预测正确的数量
+        for batch_x, batch_y in test_loader:
+            if args.cuda: # 使用GPU，将数据载入cuda
+                batch_x, batch_y = Variable(batch_x.cuda()), Variable(batch_y.cuda())
+            else: # 使用CPU
+                batch_x, batch_y = Variable(batch_x), Variable(batch_y)
+
+            out = net(batch_x) # 将一批数据导入网络，获得输出out，注意：这个不是预测值，而是输出的10个类别的概率分布
+            loss = loss_func(out, batch_y) # 计算一批数据的损失
+            eval_loss += loss.item() # 将损失加到当前验证的总损失中
+            pred = torch.max(out, 1)[1] # 获得预测值
+            num_correct = (pred == batch_y).sum() # 计算预测值中预测正确的数量
+            eval_acc += num_correct.item()# 将正确值加到当前验证的总正确值中
+        print('Val Loss: %.6f, Acc: %.3f' % (eval_loss / (math.ceil(len(test_dataset)/args.batch_size)),
+                                             eval_acc / (len(test_dataset))))
+
+if __name__ == "__main__":
+    train()
+    torch.save(net.state_dict(), './output/params.pth')
+    print("Model saved at: ./output/params.pth")
