@@ -12,17 +12,17 @@ from sklearn.model_selection import train_test_split
 from sklearn.discriminant_analysis import StandardScaler
 
 # 运行参数
-parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
-parser.add_argument('--batch_size', type=int, default=64, help='training batch size') # batch size 一批处理的数据量
-parser.add_argument('--epochs', type=int, default=50, help='number of epochs to train') # 总的迭代次数
-parser.add_argument('--use_cuda', default=False, help='using CUDA for training') # 是否使用GPU训练 若使用GPU，请将False改为Ture
+parser = argparse.ArgumentParser()
+parser.add_argument('--batch_size', type=int, default=256) # batch size 一批处理的数据量
+parser.add_argument('--epochs', type=int, default=50) # 总的迭代次数
+parser.add_argument('--use_cuda', type=int, default=False) # 是否使用GPU训练 若使用GPU，请将False改为Ture
 
 args = parser.parse_args()
-args.cuda = args.use_cuda and torch.cuda.is_available()
+args.cuda = bool(args.use_cuda)
     
 data = pd.read_csv('winequality-white.csv', delimiter=';') # 载入数据集
 X = data.iloc[:, :-1].values # 分离出参数 X
-y = data.iloc[:, -1].values # 分离出标签 Y
+y = data.iloc[:, -1].values # 分离出标签 Y （3 ~ 9）
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1) # 划分训练/测试数据
 
@@ -72,7 +72,7 @@ def train():
         os.mkdir("./output")
 
     loss_func = nn.CrossEntropyLoss() # 定义损失函数为交叉熵损失函数
-    optimizer = torch.optim.SGD(net.parameters(), lr=1) # 定义优化器
+    optimizer = torch.optim.SGD(net.parameters(), lr=0.1) # 定义优化器
     CosineLR = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=150, eta_min=0) # 余弦退火学习率衰减
 
     # --------------------------开始训练------------------------
@@ -89,6 +89,7 @@ def train():
             loss = loss_func(out, batch_y) # 计算一批数据的损失
             train_loss += loss.item() # 将损失加到当前迭代的总损失中
             pred = torch.max(out, 1)[1] # 获得预测值
+            # pred.add(3)
             train_correct = (pred == batch_y).sum() # 计算预测值中预测正确的数量
             train_acc += train_correct.item() # 将正确值加到当前迭代的总正确值中
             print('epoch: %2d/%d batch %3d/%d  Train Loss: %.3f, Acc: %.3f'
@@ -116,8 +117,10 @@ def train():
             loss = loss_func(out, batch_y) # 计算一批数据的损失
             eval_loss += loss.item() # 将损失加到当前验证的总损失中
             pred = torch.max(out, 1)[1] # 获得预测值
+            # pred.add(3)
             num_correct = (pred == batch_y).sum() # 计算预测值中预测正确的数量
             eval_acc += num_correct.item()# 将正确值加到当前验证的总正确值中
+        CosineLR.step() # 更新learning rate
         print('Val Loss: %.6f, Acc: %.3f' % (eval_loss / (math.ceil(len(test_dataset)/args.batch_size)),
                                              eval_acc / (len(test_dataset))))
 
