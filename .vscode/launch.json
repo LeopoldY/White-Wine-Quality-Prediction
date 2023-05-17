@@ -11,7 +11,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--use_cuda", "0"] // 0:使用CPU，1:使用GPU
+            "args": ["--use_cuda", "1"] // 0:使用CPU，1:使用GPU
         }
     ]
 }
