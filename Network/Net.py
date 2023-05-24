@@ -6,7 +6,7 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.block1 = nn.Sequential(
             nn.Linear(11, 16),
-            nn.ReLU()
+            nn.Sigmoid()
         )
         self.block2 = nn.Sequential(
             nn.Linear(16, 32),
