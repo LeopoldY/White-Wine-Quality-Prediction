@@ -2,7 +2,7 @@ import torch
 from Network.Net import Net
 from dataloader import get_x_y
 
-param_dic = torch.load('./output/params.ml')
+param_dic = torch.load('./output/Model.pt')
 net = Net()
 net.load_state_dict(param_dic)
 
