@@ -2,6 +2,7 @@ import os
 import argparse
 import math
 import torch
+import shutil
 import torch.nn as nn
 import matplotlib.pyplot as plt
 
@@ -14,7 +15,7 @@ from dataloader import load_from_csv
 # 运行参数
 parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', type=int, default=512) # batch size 一批处理的数据量
-parser.add_argument('--epochs', type=int, default=1000) # 总的迭代次数
+parser.add_argument('--epochs', type=int, default=3000) # 总的迭代次数
 parser.add_argument('--use_cuda', type=int, default=False) # 是否使用GPU训练
 
 args = parser.parse_args()
@@ -40,12 +41,12 @@ def train():
     if not os.path.exists("./output"): # 创建输出文件夹
         os.mkdir("./output")
     else:
-        os.rmdir("./output")
+        shutil.rmtree("./output")
         os.mkdir("./output")
 
     loss_func = nn.CrossEntropyLoss() # 定义损失函数为交叉熵损失函数
-    optimizer = torch.optim.SGD(net.parameters(), lr=0.6, weight_decay=1e-4) # 定义优化器
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, 100)
+    optimizer = torch.optim.SGD(net.parameters(), lr=0.7, weight_decay=1e-4) # 定义优化器
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, 500)
 
     avgLoss_per_epoch = [] # 每一次迭代的平均训练损失
     acc_per_epoch = [] # 每一次迭代的训练准确率
