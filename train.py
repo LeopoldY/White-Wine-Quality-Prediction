@@ -101,8 +101,8 @@ def train():
             print('Val Loss: %.6f, Acc: %.3f' 
                   % (evalLoss_per_epoch[epoch], eval_acc_epoch[epoch]))
     
-    torch.save(net.state_dict(), './output/params.pth')
-    print("Model saved at: ./output/params.pth")
+    torch.save(net.state_dict(), './output/params.pt')
+    print("Model saved at: ./output/params.pt")
 
     plt.plot(avgLoss_per_epoch, label = 'Train Loss')
     plt.plot(acc_per_epoch, label = 'Train Accuracy')
