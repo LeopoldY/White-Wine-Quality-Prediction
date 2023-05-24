@@ -14,7 +14,7 @@ from dataloader import load_from_csv
 # 运行参数
 parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', type=int, default=512) # batch size 一批处理的数据量
-parser.add_argument('--epochs', type=int, default=3000) # 总的迭代次数
+parser.add_argument('--epochs', type=int, default=1000) # 总的迭代次数
 parser.add_argument('--use_cuda', type=int, default=False) # 是否使用GPU训练
 
 args = parser.parse_args()
@@ -39,10 +39,13 @@ def train():
     
     if not os.path.exists("./output"): # 创建输出文件夹
         os.mkdir("./output")
+    else:
+        os.rmdir("./output")
+        os.mkdir("./output")
 
     loss_func = nn.CrossEntropyLoss() # 定义损失函数为交叉熵损失函数
-    optimizer = torch.optim.SGD(net.parameters(), lr=0.5, weight_decay=1e-4) # 定义优化器
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, [750, 1500, 2250], 0.5)
+    optimizer = torch.optim.SGD(net.parameters(), lr=0.6, weight_decay=1e-4) # 定义优化器
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, 100)
 
     avgLoss_per_epoch = [] # 每一次迭代的平均训练损失
     acc_per_epoch = [] # 每一次迭代的训练准确率
@@ -64,7 +67,6 @@ def train():
             loss = loss_func(out, batch_y) # 计算一批数据的损失
             train_loss += loss.item() # 将损失加到当前迭代的总损失中
             pred = torch.max(out, 1)[1] # 获得预测值
-
             train_correct = (pred == batch_y).sum() # 计算预测值中预测正确的数量
             train_acc += train_correct.item() # 将正确值加到当前迭代的总正确值中
             optimizer.zero_grad() # 梯度清零
@@ -100,9 +102,11 @@ def train():
         if (epoch+1) % 50 == 0:
             print('Val Loss: %.6f, Acc: %.3f' 
                   % (evalLoss_per_epoch[epoch], eval_acc_epoch[epoch]))
-    
-    torch.save(net.state_dict(), './output/params.pt')
-    print("Model saved at: ./output/params.pt")
+        if (epoch+1) % 100 == 0:
+            torch.save(net.state_dict(), f'./output/epoch_{epoch+1}.pt')
+
+    torch.save(net.state_dict(), f'./output/Model.pt')
+    print("Model saved at: ./output/Model.pt")
 
     plt.plot(avgLoss_per_epoch, label = 'Train Loss')
     plt.plot(acc_per_epoch, label = 'Train Accuracy')
