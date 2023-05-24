@@ -40,7 +40,7 @@ def train():
     if not os.path.exists("./output"): # 创建输出文件夹
         os.mkdir("./output")
 
-    loss_func = nn.CrossEntropyLoss() # type: ignore # 定义损失函数为交叉熵损失函数
+    loss_func = nn.CrossEntropyLoss() # 定义损失函数为交叉熵损失函数
     optimizer = torch.optim.SGD(net.parameters(), lr=0.5, weight_decay=1e-4) # 定义优化器
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, [750, 1500, 2250], 0.5)
 
@@ -101,6 +101,9 @@ def train():
             print('Val Loss: %.6f, Acc: %.3f' 
                   % (evalLoss_per_epoch[epoch], eval_acc_epoch[epoch]))
     
+    torch.save(net.state_dict(), './output/params.pth')
+    print("Model saved at: ./output/params.pth")
+
     plt.plot(avgLoss_per_epoch, label = 'Train Loss')
     plt.plot(acc_per_epoch, label = 'Train Accuracy')
     plt.plot(evalLoss_per_epoch, label = 'Evaluation Loss')
@@ -110,5 +113,4 @@ def train():
 
 if __name__ == "__main__":
     train()
-    torch.save(net.state_dict(), './output/params.pth')
-    print("Model saved at: ./output/params.pth")
+

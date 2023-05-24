@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
-# 自定义网络结构，包含三个全连接层和两个relu激活函数
-
+# 自定义网络结构
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -29,4 +28,6 @@ class Net(nn.Module):
         x = self.block3(x)
         x = self.block4(x)
         x = self.fc5(x)
+        x = torch.log_softmax(x, 1)
         return x
+    
